@@ -138,11 +138,17 @@ img { max-width: 100%; display: block; }
   font-size: .78rem; font-weight: 700; color: #fff;
   backdrop-filter: blur(6px);
 }
+/* FIX #9 — Safari --dot CSS variable in ::before 미작동 수정 */
 .tbadge::before {
-  content: ''; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--dot, #fff);
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
   flex-shrink: 0;
+  /* Safari fallback: background는 HTML inline style로 처리 */
+  background: currentColor;
+  opacity: 0.6;
 }
+
 
 /* ── WRAP ── */
 .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
