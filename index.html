@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="description" content="AI 6개 팀이 협업하는 스마트 휴가 플래너 — 항공·호텔·날씨·관광지 실시간 조회"/>
+  <meta name="theme-color" content="#1e3a8a"/>
+  <!-- iOS Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>🌴 AI 휴가 플래너 v2.1</title>
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ===== LOADING OVERLAY ===== -->
+  <div id="lov" aria-hidden="true">
+    <div class="lov-inner">
+      <div class="lspin"></div>
+      <div class="ltxt" id="ltxt">🤖 AI 팀들이 작업 중입니다...</div>
+      <div class="lprog-wrap"><div class="lprogb" id="lprogb"></div></div>
+      <div class="lstep" id="lstep">잠시만 기다려 주세요</div>
+      <div class="lteams" id="lteams">
+        <span class="lteam pending" id="lt-air">✈️ 항공</span>
+        <span class="lteam pending" id="lt-hotel">🏨 호텔</span>
+        <span class="lteam pending" id="lt-guide">🗺️ 가이드</span>
+        <span class="lteam pending" id="lt-weather">🌤️ 날씨</span>
+        <span class="lteam pending" id="lt-budget">💰 예산</span>
+        <span class="lteam pending" id="lt-qa">🔍 검수</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NOTIFICATION ===== -->
+  <div class="notif" id="notif" role="status" aria-live="polite"></div>
+
+  <!-- ===== SCROLL TOP ===== -->
+  <button class="stbtn" id="stbtn" aria-label="맨 위로">▲</button>
+
+  <!-- ===== HERO ===== -->
+  <header class="hero">
+    <div class="hero-badge">v2.1</div>
+    <h1>🌴 AI 휴가 플래너</h1>
+    <p class="hero-sub">6개의 AI 전문팀 · 실시간 날씨 · 관광지 자동 조회 · Skyscanner 연동</p>
+    <div class="team-row">
+      <span class="tbadge" style="--dot:#38bdf8">✈️ 항공팀</span>
+      <span class="tbadge" style="--dot:#f59e0b">🏨 호텔팀</span>
+      <span class="tbadge" style="--dot:#10b981">🗺️ 가이드팀</span>
+      <span class="tbadge" style="--dot:#06b6d4">🌤️ 날씨팀</span>
+      <span class="tbadge" style="--dot:#ef4444">💰 예산팀</span>
+      <span class="tbadge" style="--dot:#f472b6">🔍 웹검수팀</span>
+    </div>
+  </header>
+
+  <!-- ===== FORM ===== -->
+  <div class="wrap">
+    <div class="form-card" id="form-card">
+      <h2>📅 여행 정보 입력</h2>
+      <div class="fg-row c3">
+        <div class="fg">
+          <label for="dep">✈️ 출발일</label>
+          <input type="date" id="dep" value="2026-07-11"/>
+        </div>
+        <div class="fg">
+          <label for="ret">🏠 귀국일</label>
+          <input type="date" id="ret" value="2026-07-18"/>
+        </div>
+        <div class="fg">
+          <label for="pax">👤 인원 수</label>
+          <select id="pax">
+            <option value="1">1명</option>
+            <option value="2" selected>2명 (2인 1실)</option>
+            <option value="3">3명</option>
+            <option value="4">4명</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg-row c3" style="margin-top:12px;">
+        <div class="fg">
+          <label for="airport">🛫 출발 공항</label>
+          <select id="airport">
+            <option value="ICN" selected>인천 (ICN)</option>
+            <option value="GMP">김포 (GMP)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label for="cabin">💺 좌석 등급</label>
+          <select id="cabin">
+            <option value="economy" selected>이코노미</option>
+            <option value="premiumeconomy">프리미엄 이코노미</option>
+            <option value="business">비즈니스</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label for="blimit">💰 1인 예산 한도</label>
+          <select id="blimit">
+            <option value="500000">50만원 이하</option>
+            <option value="700000" selected>70만원 이하</option>
+            <option value="1000000">100만원 이하</option>
+            <option value="1500000">150만원 이하</option>
+            <option value="9999999">제한 없음</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-run" id="btn-run" onclick="App.run()">
+        <span class="btn-run-icon">🤖</span>
+        AI 팀 전체 작동 — 휴가 계획 생성
+      </button>
+    </div>
+
+    <!-- ADD DESTINATION -->
+    <div class="add-dest-panel" id="add-dest-panel">
+      <h3>🌍 여행지 선택 & 직접 추가</h3>
+      <div class="dest-list" id="dest-list"></div>
+      <div class="add-dest-form" id="add-dest-form">
+        <div class="adf-inputs">
+          <input type="text" id="nd-name" placeholder="여행지 이름 (예: 싱가포르)"/>
+          <input type="text" id="nd-iata" placeholder="IATA (예: SIN)" maxlength="3"/>
+          <input type="text" id="nd-flag" placeholder="국기 🇸🇬" maxlength="4"/>
+        </div>
+        <button class="btn-add" onclick="App.addDest()">＋ 추가</button>
+      </div>
+      <p class="dest-hint">💡 주요 IATA 코드: 오사카=KIX · 방콕=BKK · 코타키나발루=BKI · 도쿄=NRT · 싱가포르=SIN · 발리=DPS · 파리=CDG · 런던=LHR · 뉴욕=JFK</p>
+    </div>
+  </div>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="container" id="main" style="display:none;">
+
+    <!-- TEAM REPORTS -->
+    <div class="report-grid" id="report-grid">
+      <div class="rc air"><h5>✈️ 항공팀</h5><p id="r-air">대기 중...</p></div>
+      <div class="rc hotel"><h5>🏨 호텔팀</h5><p id="r-hotel">대기 중...</p></div>
+      <div class="rc guide"><h5>🗺️ 가이드팀</h5><p id="r-guide">대기 중...</p></div>
+      <div class="rc weather"><h5>🌤️ 날씨팀</h5><p id="r-weather">대기 중...</p></div>
+      <div class="rc budget"><h5>💰 예산팀</h5><p id="r-budget">대기 중...</p></div>
+      <div class="rc qa"><h5>🔍 웹검수팀</h5><p id="r-qa">대기 중...</p></div>
+    </div>
+
+    <!-- QA ALERT -->
+    <div id="qa-alert" class="alert qa-alert" style="display:none;"></div>
+
+    <!-- TABS -->
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"  onclick="App.tab('overview',this)">📋 총괄</button>
+      <button class="tab-btn" role="tab" aria-selected="false" onclick="App.tab('flights',this)">✈️ 항공</button>
+      <button class="tab-btn" role="tab" aria-selected="false" onclick="App.tab('hotels',this)">🏨 호텔</button>
+      <button class="tab-btn" role="tab" aria-selected="false" onclick="App.tab('guide',this)">🗺️ 가이드</button>
+      <button class="tab-btn" role="tab" aria-selected="false" onclick="App.tab('weather',this)">🌤️ 날씨</button>
+      <button class="tab-btn" role="tab" aria-selected="false" onclick="App.tab('budget',this)">💰 예산</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="ts-overview" class="tab-sec active" role="tabpanel">
+      <div class="alert info" id="ov-alert">📋 총괄팀 최종 보고 — 선택된 항공·호텔·예산을 한눈에 확인하세요.</div>
+      <div class="ogrid">
+        <div class="ov-card span2" id="ov-sumwrap">
+          <h4>🗓️ 여행 일정 요약</h4>
+          <div id="ov-sum">정보를 입력 후 AI 팀을 작동시켜주세요.</div>
+        </div>
+        <div class="ov-card"><h4>✈️ 선택 항공편</h4><div id="ov-flt">미선택</div></div>
+        <div class="ov-card"><h4>🏨 선택 호텔</h4><div id="ov-htl">미선택</div></div>
+      </div>
+      <div id="ov-bsum" style="margin-top:16px;"></div>
+    </section>
+
+    <!-- FLIGHTS -->
+    <section id="ts-flights" class="tab-sec" role="tabpanel">
+      <div class="sh">
+        <span class="ic">✈️</span>
+        <div class="inf"><h3>항공편 조회</h3><p id="flt-sub">직항 기준 · Skyscanner 연동</p></div>
+        <span class="tt">항공팀</span>
+      </div>
+      <div class="alert info sky-note">
+        💡 <strong>Skyscanner에서 검색 →</strong> 버튼으로 실제 항공권 가격을 실시간 확인할 수 있습니다.
+        <span class="sky-logo">▲ Skyscanner</span>
+      </div>
+      <div class="cgrid" id="flt-grid"></div>
+    </section>
+
+    <!-- HOTELS -->
+    <section id="ts-hotels" class="tab-sec" role="tabpanel">
+      <div class="sh">
+        <span class="ic">🏨</span>
+        <div class="inf"><h3>추천 호텔</h3><p id="htl-sub">2인 1실 · 1박 10만원 이하</p></div>
+        <span class="tt">호텔팀</span>
+      </div>
+      <div class="alert ok">🏆 <strong>2인 1실 기준</strong> — 예산 계산 시 숙박비 1인 부담 = 룸 요금 ÷ 2</div>
+      <div class="cgrid" id="htl-grid"></div>
+    </section>
+
+    <!-- GUIDE -->
+    <section id="ts-guide" class="tab-sec" role="tabpanel">
+      <div class="sh">
+        <span class="ic">🗺️</span>
+        <div class="inf"><h3>여행 가이드</h3><p id="gd-sub">볼거리·먹거리·즐길거리 + 실시간 관광지</p></div>
+        <span class="tt">가이드팀</span>
+      </div>
+      <!-- Wikipedia summary -->
+      <div class="wiki-card" id="wiki-card" style="display:none;">
+        <div class="wiki-thumb" id="wiki-thumb"></div>
+        <div class="wiki-body">
+          <div class="wiki-badge">📖 Wikipedia</div>
+          <h3 id="wiki-title"></h3>
+          <p id="wiki-desc"></p>
+          <a id="wiki-link" href="#" target="_blank" rel="noopener" class="wiki-more">더 읽기 →</a>
+        </div>
+      </div>
+      <div id="gd-content"></div>
+      <!-- Live attractions from OpenTripMap -->
+      <div id="live-attractions" style="display:none;">
+        <div class="sh" style="margin-top:20px;">
+          <span class="ic">📍</span>
+          <div class="inf"><h3>실시간 관광 명소</h3><p>OpenTripMap 실시간 데이터</p></div>
+          <span class="tt">가이드팀 LIVE</span>
+        </div>
+        <div class="cgrid" id="live-grid"></div>
+      </div>
+    </section>
+
+    <!-- WEATHER -->
+    <section id="ts-weather" class="tab-sec" role="tabpanel">
+      <div class="sh">
+        <span class="ic">🌤️</span>
+        <div class="inf"><h3>여행지 날씨 예보</h3><p id="wx-sub">Open-Meteo 무료 기상 API</p></div>
+        <span class="tt">날씨팀</span>
+      </div>
+      <div id="weather-content">
+        <div class="loading-inline">🌐 날씨 데이터 로딩 중...</div>
+      </div>
+    </section>
+
+    <!-- BUDGET -->
+    <section id="ts-budget" class="tab-sec" role="tabpanel">
+      <div class="sh">
+        <span class="ic">💰</span>
+        <div class="inf"><h3>여행 예산 계획서</h3><p>2인 1실 · 1인 예산 계산</p></div>
+        <span class="tt">예산팀</span>
+      </div>
+      <div class="alert warn" id="bwarn" style="display:none;">⚠️ 예산 한도 초과! 슬라이더 조정 또는 "예산 재조정" 버튼을 사용하세요.</div>
+      <div class="budget-card">
+        <div class="bh">
+          <div>
+            <h3>💼 총 여행 예산</h3>
+            <div class="bh-sub">2인 1실 기준 · 1인 부담</div>
+          </div>
+          <div class="btotal-wrap">
+            <div class="btotal" id="btotal-badge">₩0</div>
+            <div class="bh-sub">1인 기준</div>
+          </div>
+        </div>
+        <div class="bt-scroll">
+          <table class="bt" id="budget-table">
+            <thead>
+              <tr>
+                <th>항목</th><th>내용</th><th>단가</th>
+                <th>일수/박</th><th>룸/전체</th><th>1인 부담</th>
+              </tr>
+            </thead>
+            <tbody id="btbody">
+              <tr><td colspan="6" class="bt-empty">AI 팀 실행 후 확인 가능합니다</td></tr>
+            </tbody>
+            <tfoot>
+              <tr class="trow"><td colspan="5">✈️ 1인 합계</td><td id="btotal-1p">₩0</td></tr>
+              <tr class="trow2" id="brow2p" style="display:none;">
+                <td colspan="5" id="brow2p-label">👥 전체 합계</td>
+                <td id="btotal-all">₩0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="badj">
+          <label for="bslider">💸 예산 한도 (1인)</label>
+          <input type="range" id="bslider" min="200000" max="2000000" step="50000" value="700000" oninput="App.sliderChange(this.value)"/>
+          <span class="bval" id="bslider-val">₩700,000</span>
+          <button class="btn-apply" onclick="App.applyBudget()">🔄 재조정</button>
+        </div>
+      </div>
+      <div class="alert info" style="margin-top:14px;">
+        💡 <strong>예산팀 팁:</strong> 숙박은 2인 1실 기준으로 1인 부담이 절반입니다. 항공권은 3주 전 구매 시 평균 20~30% 절감 가능합니다.
+      </div>
+    </section>
+
+  </div><!-- /container -->
+
+  <footer>
+    <strong>🌴 AI 휴가 플래너 v2.1</strong> — 항공팀 · 호텔팀 · 가이드팀 · 날씨팀 · 예산팀 · 웹검수팀<br/>
+    <span>날씨: Open-Meteo · 지오코딩: Nominatim · 관광지: OpenTripMap · 항공: Skyscanner 딥링크</span><br/>
+    <span>표시 가격은 참고용이며 실제 가격과 다를 수 있습니다.</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
